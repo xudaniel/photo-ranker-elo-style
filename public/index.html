@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Photo Ranker</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="hero">
+        <h1>Photo Ranker</h1>
+        <p>Upload photos, battle them, and crown your podium.</p>
+      </header>
+
+      <section class="card" id="upload-section">
+        <h2>1) Upload Photos</h2>
+        <p class="subtle">Choose up to 20 photos.</p>
+        <input id="upload-input" type="file" accept="image/*" multiple />
+        <div class="inline-stats">
+          <span id="count-label">0 / 20</span>
+          <button id="clear-btn" class="ghost">Clear</button>
+        </div>
+        <div id="preview-grid" class="preview-grid"></div>
+      </section>
+
+      <section class="card" id="mode-section">
+        <h2>2) Battle Style</h2>
+        <div class="mode-grid" id="mode-grid">
+          <button class="mode active" data-mode="head">Head-to-Head</button>
+          <button class="mode" data-mode="speed">Speed Blitz</button>
+          <button class="mode" data-mode="vibe">Vibe Check</button>
+          <button class="mode" data-mode="boxing">Boxing Ring</button>
+          <button class="mode" data-mode="slot">Slot Machine</button>
+          <button class="mode" data-mode="runway">Runway</button>
+        </div>
+
+        <div id="speed-controls" class="inline-controls hidden">
+          <label for="speed-timer">Round timer</label>
+          <input id="speed-timer" type="range" min="5" max="20" value="10" />
+          <span id="timer-label">10s</span>
+        </div>
+      </section>
+
+      <section class="card hidden" id="battle-section">
+        <div class="battle-top">
+          <h2 id="battle-title">Battle</h2>
+          <div>
+            <span id="round-label">Round 0</span>
+            <span id="streak-label" class="pill">Streak 0</span>
+          </div>
+        </div>
+
+        <div id="timer-shell" class="timer-shell hidden">
+          <div id="timer-fill" class="timer-fill"></div>
+        </div>
+
+        <div id="confidence-wrap" class="confidence-wrap">
+          <span>Confidence</span>
+          <div class="confidence-bar"><div id="confidence-fill"></div></div>
+          <span id="confidence-text">0%</span>
+        </div>
+
+        <div id="arena" class="arena"></div>
+
+        <div class="battle-actions">
+          <button id="skip-btn" class="ghost">Skip Pair</button>
+          <button id="finish-btn">Finish Ranking</button>
+        </div>
+      </section>
+
+      <section class="card hidden" id="results-section">
+        <h2>Results</h2>
+        <div id="podium" class="podium"></div>
+        <ol id="ranking-list" class="ranking-list"></ol>
+      </section>
+    </div>
+
+    <div id="toast" class="toast hidden"></div>
+    <div id="lightbox" class="lightbox hidden">
+      <button id="lightbox-close">×</button>
+      <img id="lightbox-img" alt="Expanded photo" />
+    </div>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
