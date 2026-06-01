@@ -24,8 +24,24 @@
         <div id="preview-grid" class="preview-grid"></div>
       </section>
 
+      <section class="card" id="finder-section">
+        <div class="section-head">
+          <div>
+            <h2>2) Pic Finder</h2>
+            <p class="subtle">Search your browser-loaded photos by file name before or during battles.</p>
+          </div>
+          <span id="finder-summary" class="pill">0 matches</span>
+        </div>
+        <label class="finder-label" for="finder-input">Find a pic</label>
+        <div class="finder-row">
+          <input id="finder-input" type="search" placeholder="Try “beach”, “portrait”, or a file name" autocomplete="off" />
+          <button id="finder-clear-btn" class="ghost" type="button">Reset</button>
+        </div>
+        <div id="finder-results" class="finder-results empty">Upload photos to start finding them.</div>
+      </section>
+
       <section class="card" id="mode-section">
-        <h2>2) Battle Style</h2>
+        <h2>3) Battle Style</h2>
         <div class="mode-grid" id="mode-grid">
           <button class="mode active" data-mode="head">Head-to-Head</button>
           <button class="mode" data-mode="speed">Speed Blitz</button>
