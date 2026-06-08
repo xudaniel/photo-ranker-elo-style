@@ -11,6 +11,7 @@ const state = {
   timerId: null,
   activePair: null,
   locked: false,
+  finderQuery: '',
 };
 
 const MODE_META = {
@@ -27,6 +28,10 @@ const ui = {
   uploadInput: $('upload-input'),
   previewGrid: $('preview-grid'),
   countLabel: $('count-label'),
+  finderInput: $('finder-input'),
+  finderClearBtn: $('finder-clear-btn'),
+  finderResults: $('finder-results'),
+  finderSummary: $('finder-summary'),
   modeGrid: $('mode-grid'),
   speedControls: $('speed-controls'),
   speedTimer: $('speed-timer'),
@@ -49,12 +54,25 @@ const ui = {
 };
 
 bindEvents();
+renderFinder();
 
 function bindEvents() {
   ui.uploadInput.addEventListener('change', onUpload);
   $('clear-btn').addEventListener('click', clearAll);
   $('finish-btn').addEventListener('click', finishRanking);
   $('skip-btn').addEventListener('click', () => nextRound(true));
+  ui.finderInput.addEventListener('input', () => {
+    state.finderQuery = ui.finderInput.value.trim();
+    renderPreviews();
+    renderFinder();
+  });
+  ui.finderClearBtn.addEventListener('click', () => {
+    state.finderQuery = '';
+    ui.finderInput.value = '';
+    renderPreviews();
+    renderFinder();
+    ui.finderInput.focus();
+  });
   ui.speedTimer.addEventListener('input', () => {
     state.timerSec = Number(ui.speedTimer.value);
     ui.timerLabel.textContent = `${state.timerSec}s`;
@@ -101,7 +119,7 @@ function onUpload(event) {
     const reader = new FileReader();
     reader.onload = () => {
       state.photos.push({
-        id: crypto.randomUUID(),
+        id: createPhotoId(),
         name: file.name || 'Untitled',
         src: reader.result,
         elo: BASE_ELO,
@@ -111,6 +129,7 @@ function onUpload(event) {
       });
 
       renderPreviews();
+      renderFinder();
       if (state.photos.length >= 2 && state.round === 0) {
         startBattle();
       }
@@ -128,7 +147,9 @@ function clearAll() {
   state.streak = 0;
   state.activePair = null;
   state.locked = false;
+  state.finderQuery = '';
 
+  ui.finderInput.value = '';
   ui.previewGrid.innerHTML = '';
   ui.battleSection.classList.add('hidden');
   ui.resultsSection.classList.add('hidden');
@@ -137,20 +158,44 @@ function clearAll() {
   ui.streakLabel.textContent = 'Streak 0';
   ui.confidenceFill.style.width = '0%';
   ui.confidenceText.textContent = '0%';
+  renderFinder();
 
   toast('Cleared all photos.');
 }
 
 function renderPreviews() {
   ui.countLabel.textContent = `${state.photos.length} / ${MAX_PHOTOS}`;
-  ui.previewGrid.innerHTML = state.photos
-    .map((photo, index) => `
-      <div class="thumb" title="${escapeAttr(photo.name)}">
-        <img src="${photo.src}" alt="${escapeAttr(photo.name)}" />
-        <button class="thumb-remove" data-index="${index}" aria-label="Remove photo">×</button>
+  const matches = getFinderMatches();
+  const visiblePhotos = state.finderQuery ? matches : state.photos;
+
+  if (!visiblePhotos.length) {
+    ui.previewGrid.innerHTML = `
+      <div class="preview-empty">
+        ${state.photos.length ? 'No uploaded photos match your finder search.' : 'No photos uploaded yet.'}
       </div>
-    `)
+    `;
+    return;
+  }
+
+  ui.previewGrid.innerHTML = visiblePhotos
+    .map((photo) => {
+      const index = state.photos.findIndex((entry) => entry.id === photo.id);
+      return `
+        <div class="thumb" title="${escapeAttr(photo.name)}" data-photo-id="${photo.id}">
+          <img src="${photo.src}" alt="${escapeAttr(photo.name)}" />
+          <span class="thumb-name">${escapeHtml(photo.name)}</span>
+          <button class="thumb-remove" data-index="${index}" aria-label="Remove ${escapeAttr(photo.name)}">×</button>
+        </div>
+      `;
+    })
     .join('');
+
+  ui.previewGrid.querySelectorAll('.thumb').forEach((thumb) => {
+    thumb.addEventListener('click', () => {
+      const photo = state.photos.find((entry) => entry.id === thumb.dataset.photoId);
+      if (photo) openLightbox(photo.src, photo.name);
+    });
+  });
 
   ui.previewGrid.querySelectorAll('.thumb-remove').forEach((button) => {
     button.addEventListener('click', (event) => {
@@ -161,10 +206,62 @@ function renderPreviews() {
   });
 }
 
+function getFinderMatches() {
+  const query = state.finderQuery.trim().toLowerCase();
+  if (!query) return [...state.photos];
+  return state.photos.filter((photo, index) => {
+    const searchable = [photo.name, `#${index + 1}`, String(Math.round(photo.elo))].join(' ').toLowerCase();
+    return searchable.includes(query);
+  });
+}
+
+function renderFinder() {
+  const matches = getFinderMatches();
+  const query = state.finderQuery.trim();
+  const total = state.photos.length;
+
+  ui.finderSummary.textContent = query ? `${matches.length} / ${total} matches` : `${total} photos`;
+  ui.finderClearBtn.disabled = !query;
+
+  if (!total) {
+    ui.finderResults.className = 'finder-results empty';
+    ui.finderResults.textContent = 'Upload photos to start finding them.';
+    return;
+  }
+
+  if (!matches.length) {
+    ui.finderResults.className = 'finder-results empty';
+    ui.finderResults.innerHTML = `No pics found for <strong>${escapeHtml(query)}</strong>.`;
+    return;
+  }
+
+  ui.finderResults.className = 'finder-results';
+  ui.finderResults.innerHTML = matches
+    .map((photo, index) => `
+      <button class="finder-card" type="button" data-photo-id="${photo.id}">
+        <img src="${photo.src}" alt="${escapeAttr(photo.name)}" />
+        <span>
+          <strong>${escapeHtml(photo.name)}</strong>
+          <small>${query ? 'Match' : `Photo ${index + 1}`} · ${Math.round(photo.elo)} Elo · W:${photo.wins}/L:${photo.losses}</small>
+        </span>
+      </button>
+    `)
+    .join('');
+
+  ui.finderResults.querySelectorAll('.finder-card').forEach((button) => {
+    button.addEventListener('click', () => {
+      const photo = state.photos.find((entry) => entry.id === button.dataset.photoId);
+      if (photo) openLightbox(photo.src, photo.name);
+    });
+  });
+}
+
 function removePhoto(index) {
   if (Number.isNaN(index) || !state.photos[index]) return;
   state.photos.splice(index, 1);
   renderPreviews();
+
+  renderFinder();
 
   if (state.photos.length < 2) {
     state.round = 0;
@@ -409,27 +506,28 @@ function finishRanking() {
     <div class="slot">
       <strong>#${idx + 1}</strong>
       <img src="${photo.src}" alt="${escapeAttr(photo.name)}" />
-      <div>${photo.name}</div>
+      <div>${escapeHtml(photo.name)}</div>
       <small>${Math.round(photo.elo)} Elo</small>
     </div>
   `).join('');
 
   ui.rankingList.innerHTML = ranked.map((photo, idx) => `
-    <li data-photo-id="${photo.id}">#${idx + 1} ${photo.name} — ${Math.round(photo.elo)} Elo (W:${photo.wins}/L:${photo.losses})</li>
+    <li data-photo-id="${photo.id}">#${idx + 1} ${escapeHtml(photo.name)} — ${Math.round(photo.elo)} Elo (W:${photo.wins}/L:${photo.losses})</li>
   `).join('');
 
   [...ui.rankingList.querySelectorAll('li')].forEach((item) => {
     item.addEventListener('click', () => {
       const photo = state.photos.find((entry) => entry.id === item.dataset.photoId);
-      if (photo) openLightbox(photo.src);
+      if (photo) openLightbox(photo.src, photo.name);
     });
   });
 
   toast('🏆 Ranking complete');
 }
 
-function openLightbox(src) {
+function openLightbox(src, alt = 'Expanded photo') {
   ui.lightboxImg.src = src;
+  ui.lightboxImg.alt = alt;
   ui.lightbox.classList.remove('hidden');
 }
 
@@ -488,6 +586,20 @@ function playClickTone() {
   osc.stop(ctx.currentTime + 0.13);
 }
 
+function createPhotoId() {
+  if (crypto.randomUUID) return crypto.randomUUID();
+  return `photo-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
 function escapeAttr(value) {
-  return String(value).replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+  return escapeHtml(value);
 }
