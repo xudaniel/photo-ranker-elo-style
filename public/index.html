@@ -72,14 +72,18 @@
         </div>
 
         <div id="confidence-wrap" class="confidence-wrap">
-          <span>Confidence</span>
+          <span title="Estimate based on comparison coverage and balance">Ranking confidence</span>
           <div class="confidence-bar"><div id="confidence-fill"></div></div>
           <span id="confidence-text">0%</span>
         </div>
+        <p id="confidence-note" class="confidence-note" aria-live="polite">Provisional — compare every photo a few times for a more reliable order.</p>
 
         <div id="arena" class="arena"></div>
 
+        <p class="keyboard-hint"><kbd>←</kbd> choose left · <kbd>→</kbd> choose right · <kbd>S</kbd> skip · <kbd>U</kbd> undo</p>
+
         <div class="battle-actions">
+          <button id="undo-btn" class="ghost" disabled>Undo Last Vote</button>
           <button id="skip-btn" class="ghost">Skip Pair</button>
           <button id="finish-btn">Finish Ranking</button>
         </div>
@@ -87,17 +91,19 @@
 
       <section class="card hidden" id="results-section">
         <h2>Results</h2>
+        <p id="results-summary" class="subtle"></p>
         <div id="podium" class="podium"></div>
         <ol id="ranking-list" class="ranking-list"></ol>
       </section>
     </div>
 
-    <div id="toast" class="toast hidden"></div>
+    <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
     <div id="lightbox" class="lightbox hidden">
       <button id="lightbox-close">×</button>
       <img id="lightbox-img" alt="Expanded photo" />
     </div>
 
+    <script src="/ranking.js"></script>
     <script src="/app.js"></script>
   </body>
 </html>

@@ -1,6 +1,13 @@
 const MAX_PHOTOS = 20;
-const BASE_ELO = 1200;
-const ELO_K = 24;
+const {
+  BASE_ELO,
+  pairKey,
+  recommendedRounds,
+  updateElo,
+  confidenceDetails,
+  choosePair,
+  buildRanking,
+} = window.RankingEngine;
 
 const state = {
   photos: [],
@@ -12,6 +19,10 @@ const state = {
   activePair: null,
   locked: false,
   finderQuery: '',
+  history: [],
+  lastPairKey: null,
+  transitionId: null,
+  reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
 };
 
 const MODE_META = {
@@ -43,9 +54,12 @@ const ui = {
   streakLabel: $('streak-label'),
   confidenceFill: $('confidence-fill'),
   confidenceText: $('confidence-text'),
+  confidenceNote: $('confidence-note'),
   timerShell: $('timer-shell'),
   timerFill: $('timer-fill'),
+  undoBtn: $('undo-btn'),
   resultsSection: $('results-section'),
+  resultsSummary: $('results-summary'),
   podium: $('podium'),
   rankingList: $('ranking-list'),
   toast: $('toast'),
@@ -61,6 +75,7 @@ function bindEvents() {
   $('clear-btn').addEventListener('click', clearAll);
   $('finish-btn').addEventListener('click', finishRanking);
   $('skip-btn').addEventListener('click', () => nextRound(true));
+  ui.undoBtn.addEventListener('click', undoLastVote);
   ui.finderInput.addEventListener('input', () => {
     state.finderQuery = ui.finderInput.value.trim();
     renderPreviews();
@@ -90,8 +105,29 @@ function bindEvents() {
   });
 
   window.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') closeLightbox();
+    if (event.key === 'Escape') {
+      closeLightbox();
+      return;
+    }
+
+    if (isTypingTarget(event.target) || !ui.lightbox.classList.contains('hidden')) return;
+
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
+      event.preventDefault();
+      undoLastVote();
+      return;
+    }
+
+    const key = event.key.toLowerCase();
+    if (event.key === 'ArrowLeft') chooseActiveSide(0);
+    if (event.key === 'ArrowRight') chooseActiveSide(1);
+    if (key === 's') nextRound(true);
+    if (key === 'u') undoLastVote();
   });
+}
+
+function isTypingTarget(target) {
+  return ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON', 'A'].includes(target?.tagName) || target?.isContentEditable;
 }
 
 function setMode(mode) {
@@ -142,12 +178,15 @@ function onUpload(event) {
 
 function clearAll() {
   stopTimer();
+  stopTransition();
   state.photos = [];
   state.round = 0;
   state.streak = 0;
   state.activePair = null;
   state.locked = false;
   state.finderQuery = '';
+  state.history = [];
+  state.lastPairKey = null;
 
   ui.finderInput.value = '';
   ui.previewGrid.innerHTML = '';
@@ -158,6 +197,9 @@ function clearAll() {
   ui.streakLabel.textContent = 'Streak 0';
   ui.confidenceFill.style.width = '0%';
   ui.confidenceText.textContent = '0%';
+  ui.confidenceNote.textContent = 'Provisional — compare every photo a few times for a more reliable order.';
+  ui.confidenceNote.classList.remove('stable');
+  updateUndoButton();
   renderFinder();
 
   toast('Cleared all photos.');
@@ -258,7 +300,12 @@ function renderFinder() {
 
 function removePhoto(index) {
   if (Number.isNaN(index) || !state.photos[index]) return;
+  stopTimer();
+  stopTransition();
   state.photos.splice(index, 1);
+  state.history = [];
+  state.lastPairKey = null;
+  updateUndoButton();
   renderPreviews();
 
   renderFinder();
@@ -289,35 +336,22 @@ function startBattle() {
 }
 
 function nextRound(skipped = false) {
+  if (state.locked) return;
   stopTimer();
+  stopTransition();
   if (state.photos.length < 2) return;
 
+  if (state.activePair) state.lastPairKey = pairKey(...state.activePair);
   state.round += 1;
   state.streak = skipped ? 0 : state.streak;
   ui.roundLabel.textContent = `Round ${state.round}`;
   ui.streakLabel.textContent = `Streak ${state.streak}`;
 
-  state.activePair = pickAdaptivePair();
+  state.activePair = choosePair(state.photos, state.lastPairKey);
   renderArena(state.activePair);
   renderConfidence();
 
   if (state.mode === 'speed') startTimer();
-}
-
-function pickAdaptivePair() {
-  const sorted = [...state.photos].sort((a, b) => {
-    const seenDelta = a.seen - b.seen;
-    if (seenDelta !== 0) return seenDelta;
-    const balanceA = Math.abs(a.wins - a.losses);
-    const balanceB = Math.abs(b.wins - b.losses);
-    if (balanceA !== balanceB) return balanceA - balanceB;
-    return Math.abs(a.elo - BASE_ELO) - Math.abs(b.elo - BASE_ELO);
-  });
-
-  const first = sorted[0];
-  const candidatePool = sorted.slice(1, Math.min(sorted.length, 9));
-  const second = candidatePool.sort((a, b) => Math.abs(a.elo - first.elo) - Math.abs(b.elo - first.elo))[0] || sorted[1];
-  return [first, second];
 }
 
 function renderArena(pair) {
@@ -337,7 +371,7 @@ function renderArena(pair) {
 
 function renderCard(photo, label, side) {
   return `
-    <article class="photo-card ${side}" data-id="${photo.id}">
+    <article class="photo-card ${side}" data-id="${photo.id}" role="button" tabindex="0" aria-label="Choose ${escapeAttr(photo.name)}">
       <img src="${photo.src}" alt="${escapeAttr(photo.name)}" />
       <div class="label">${label}</div>
       ${state.mode === 'boxing' ? '<div class="ring-glow"></div>' : ''}
@@ -356,6 +390,15 @@ function wireBattleInteractions(left, right) {
       registerBattle(winner, loser, card);
     });
 
+    card.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      if (state.locked) return;
+      const winner = card.dataset.id === left.id ? left : right;
+      const loser = winner.id === left.id ? right : left;
+      registerBattle(winner, loser, card);
+    });
+
     const image = card.querySelector('img');
     image.addEventListener('dblclick', (event) => {
       event.stopPropagation();
@@ -366,6 +409,15 @@ function wireBattleInteractions(left, right) {
   if (state.mode === 'vibe') {
     cards.forEach((card) => attachSwipeRecognizer(card, left, right));
   }
+}
+
+function chooseActiveSide(index) {
+  if (state.locked || !state.activePair || ui.battleSection.classList.contains('hidden')) return;
+  const winner = state.activePair[index];
+  const loser = state.activePair[index === 0 ? 1 : 0];
+  const card = [...ui.arena.querySelectorAll('.photo-card')]
+    .find((candidate) => candidate.dataset.id === winner.id);
+  if (card) registerBattle(winner, loser, card);
 }
 
 function attachSwipeRecognizer(card, left, right) {
@@ -404,6 +456,7 @@ function attachSwipeRecognizer(card, left, right) {
 }
 
 function runModeFx() {
+  if (state.reducedMotion) return;
   if (state.mode === 'slot') {
     ui.arena.querySelectorAll('.photo-card').forEach((card, idx) => {
       card.classList.add('slot-spin');
@@ -422,46 +475,104 @@ function runModeFx() {
 }
 
 function registerBattle(winner, loser, winnerCardEl) {
+  stopTimer();
   state.locked = true;
+  state.history.push({
+    round: state.round,
+    streak: state.streak,
+    lastPairKey: state.lastPairKey,
+    pairIds: state.activePair.map((photo) => photo.id),
+    winner: { id: winner.id, elo: winner.elo, wins: winner.wins, losses: winner.losses, seen: winner.seen },
+    loser: { id: loser.id, elo: loser.elo, wins: loser.wins, losses: loser.losses, seen: loser.seen },
+  });
 
-  const expectedWinner = 1 / (1 + 10 ** ((loser.elo - winner.elo) / 400));
-  const expectedLoser = 1 - expectedWinner;
-
-  winner.elo += ELO_K * (1 - expectedWinner);
-  loser.elo += ELO_K * (0 - expectedLoser);
+  const ratings = updateElo(winner.elo, loser.elo);
+  winner.elo = ratings.winner;
+  loser.elo = ratings.loser;
   winner.wins += 1;
   loser.losses += 1;
   winner.seen += 1;
   loser.seen += 1;
+  renderFinder();
 
   state.streak += 1;
   ui.streakLabel.textContent = `Streak ${state.streak}`;
+  updateUndoButton();
 
   winnerCardEl.classList.add('winner');
   celebrate();
   playClickTone();
   toast(randomReaction());
 
-  setTimeout(() => {
+  state.transitionId = setTimeout(() => {
+    state.transitionId = null;
     state.locked = false;
-    if (state.round >= recommendedRounds()) {
+    if (state.round >= recommendedRounds(state.photos.length)) {
       finishRanking();
     } else {
       nextRound();
     }
-  }, 210);
-}
-
-function recommendedRounds() {
-  return Math.max(12, state.photos.length * 4);
+  }, state.reducedMotion ? 0 : 210);
 }
 
 function renderConfidence() {
-  const votes = state.photos.reduce((acc, photo) => acc + photo.seen, 0);
-  const targetVotes = recommendedRounds() * 2;
-  const confidence = Math.min(100, Math.round((votes / targetVotes) * 100));
-  ui.confidenceFill.style.width = `${confidence}%`;
-  ui.confidenceText.textContent = `${confidence}%`;
+  const confidence = confidenceDetails(state.photos);
+  ui.confidenceFill.style.width = `${confidence.percent}%`;
+  ui.confidenceText.textContent = `${confidence.percent}%`;
+  ui.confidenceNote.classList.toggle('stable', confidence.percent >= 80);
+  if (confidence.percent < 40) {
+    ui.confidenceNote.textContent = 'Provisional — several photos still need more comparisons.';
+  } else if (confidence.percent < 80) {
+    ui.confidenceNote.textContent = 'Developing — coverage is improving, but close positions may still move.';
+  } else {
+    ui.confidenceNote.textContent = 'Strong coverage — use extra rounds to resolve close contenders.';
+  }
+}
+
+function stopTransition() {
+  if (state.transitionId) {
+    clearTimeout(state.transitionId);
+    state.transitionId = null;
+  }
+  state.locked = false;
+}
+
+function updateUndoButton() {
+  ui.undoBtn.disabled = state.history.length === 0;
+}
+
+function undoLastVote() {
+  const snapshot = state.history.pop();
+  if (!snapshot) return;
+
+  stopTimer();
+  stopTransition();
+  const winner = state.photos.find((photo) => photo.id === snapshot.winner.id);
+  const loser = state.photos.find((photo) => photo.id === snapshot.loser.id);
+  if (!winner || !loser) {
+    state.history = [];
+    updateUndoButton();
+    return;
+  }
+
+  Object.assign(winner, snapshot.winner);
+  Object.assign(loser, snapshot.loser);
+  state.round = snapshot.round;
+  state.streak = snapshot.streak;
+  state.lastPairKey = snapshot.lastPairKey;
+  state.activePair = snapshot.pairIds
+    .map((id) => state.photos.find((photo) => photo.id === id))
+    .filter(Boolean);
+
+  ui.roundLabel.textContent = `Round ${state.round}`;
+  ui.streakLabel.textContent = `Streak ${state.streak}`;
+  ui.resultsSection.classList.add('hidden');
+  renderArena(state.activePair);
+  renderConfidence();
+  renderFinder();
+  updateUndoButton();
+  if (state.mode === 'speed') startTimer();
+  toast('↩ Last vote undone');
 }
 
 function startTimer() {
@@ -497,22 +608,25 @@ function stopTimer() {
 
 function finishRanking() {
   stopTimer();
+  stopTransition();
   if (state.photos.length < 2) return;
 
-  const ranked = [...state.photos].sort((a, b) => b.elo - a.elo);
+  const ranked = buildRanking(state.photos);
+  const confidence = confidenceDetails(state.photos);
   ui.resultsSection.classList.remove('hidden');
+  ui.resultsSummary.textContent = `${state.round} rounds · ${confidence.percent}% ranking confidence${ranked.some((entry) => entry.tied) ? ' · close scores shown as ties' : ''}`;
 
-  ui.podium.innerHTML = ranked.slice(0, 3).map((photo, idx) => `
+  ui.podium.innerHTML = ranked.slice(0, 3).map(({ photo, rank, tied }) => `
     <div class="slot">
-      <strong>#${idx + 1}</strong>
+      <strong>${tied ? 'Tied ' : ''}#${rank}</strong>
       <img src="${photo.src}" alt="${escapeAttr(photo.name)}" />
       <div>${escapeHtml(photo.name)}</div>
       <small>${Math.round(photo.elo)} Elo</small>
     </div>
   `).join('');
 
-  ui.rankingList.innerHTML = ranked.map((photo, idx) => `
-    <li data-photo-id="${photo.id}">#${idx + 1} ${escapeHtml(photo.name)} — ${Math.round(photo.elo)} Elo (W:${photo.wins}/L:${photo.losses})</li>
+  ui.rankingList.innerHTML = ranked.map(({ photo, rank, tied }) => `
+    <li data-photo-id="${photo.id}" class="${tied ? 'tie' : ''}">#${rank} ${escapeHtml(photo.name)} — ${Math.round(photo.elo)} Elo (W:${photo.wins}/L:${photo.losses})${tied ? '<span class="tie-badge">close score</span>' : ''}</li>
   `).join('');
 
   [...ui.rankingList.querySelectorAll('li')].forEach((item) => {
@@ -554,6 +668,7 @@ function toast(message) {
 }
 
 function celebrate() {
+  if (state.reducedMotion) return;
   for (let i = 0; i < 18; i += 1) {
     const confetti = document.createElement('div');
     confetti.className = 'confetti';
