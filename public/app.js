@@ -34,11 +34,23 @@ const MODE_META = {
   runway: { title: 'Runway Mode', cardLabels: ['Look A', 'Look B'] },
 };
 
+const DEMO_PHOTOS = [
+  ['/demo/portrait-01.jpg', 'midnight-portrait-01.jpg'],
+  ['/demo/portrait-02.jpg', 'window-light-portrait-02.jpg'],
+  ['/demo/portrait-03.jpg', 'studio-portrait-03.jpg'],
+  ['/demo/portrait-04.jpg', 'soft-light-portrait-04.jpg'],
+  ['/demo/portrait-05.jpg', 'warm-edge-portrait-05.jpg'],
+  ['/demo/portrait-06.jpg', 'auburn-portrait-06.jpg'],
+];
+
 const $ = (id) => document.getElementById(id);
 const ui = {
   uploadInput: $('upload-input'),
   previewGrid: $('preview-grid'),
   countLabel: $('count-label'),
+  emptySection: $('empty-section'),
+  collectionDrawer: $('collection-drawer'),
+  collectionToggle: $('collection-toggle'),
   finderInput: $('finder-input'),
   finderClearBtn: $('finder-clear-btn'),
   finderResults: $('finder-results'),
@@ -52,7 +64,7 @@ const ui = {
   arena: $('arena'),
   roundLabel: $('round-label'),
   streakLabel: $('streak-label'),
-  confidenceFill: $('confidence-fill'),
+  confidenceMeter: $('confidence-meter'),
   confidenceText: $('confidence-text'),
   confidenceNote: $('confidence-note'),
   timerShell: $('timer-shell'),
@@ -68,11 +80,29 @@ const ui = {
 };
 
 bindEvents();
+renderPreviews();
 renderFinder();
 
 function bindEvents() {
   ui.uploadInput.addEventListener('change', onUpload);
-  $('clear-btn').addEventListener('click', clearAll);
+  document.querySelectorAll('label[for="upload-input"]').forEach((label) => {
+    label.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      ui.uploadInput.click();
+    });
+  });
+  $('clear-btn').addEventListener('click', () => clearAll());
+  $('demo-btn').addEventListener('click', loadDemoCollection);
+  $('empty-demo-btn').addEventListener('click', loadDemoCollection);
+  ui.collectionToggle.addEventListener('click', toggleCollectionDrawer);
+  $('drawer-close').addEventListener('click', closeCollectionDrawer);
+  $('drawer-scrim').addEventListener('click', closeCollectionDrawer);
+  $('rail-scroll-up').addEventListener('click', () => scrollPhotoRail(-1));
+  $('rail-scroll-down').addEventListener('click', () => scrollPhotoRail(1));
+  $('continue-btn').addEventListener('click', continueRanking);
+  $('continue-ranking-btn').addEventListener('click', continueRanking);
+  $('results-done-btn').addEventListener('click', () => ui.resultsSection.classList.add('hidden'));
   $('finish-btn').addEventListener('click', finishRanking);
   $('skip-btn').addEventListener('click', () => nextRound(true));
   ui.undoBtn.addEventListener('click', undoLastVote);
@@ -106,6 +136,14 @@ function bindEvents() {
 
   window.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
+      if (!ui.resultsSection.classList.contains('hidden')) {
+        continueRanking();
+        return;
+      }
+      if (document.body.classList.contains('drawer-open')) {
+        closeCollectionDrawer();
+        return;
+      }
       closeLightbox();
       return;
     }
@@ -124,6 +162,35 @@ function bindEvents() {
     if (key === 's') nextRound(true);
     if (key === 'u') undoLastVote();
   });
+}
+
+function toggleCollectionDrawer() {
+  const willOpen = !document.body.classList.contains('drawer-open');
+  document.body.classList.toggle('drawer-open', willOpen);
+  ui.collectionToggle.setAttribute('aria-expanded', String(willOpen));
+}
+
+function closeCollectionDrawer() {
+  document.body.classList.remove('drawer-open');
+  ui.collectionToggle.setAttribute('aria-expanded', 'false');
+}
+
+function openCollectionDrawer() {
+  document.body.classList.add('drawer-open');
+  ui.collectionToggle.setAttribute('aria-expanded', 'true');
+}
+
+function scrollPhotoRail(direction) {
+  ui.previewGrid.scrollBy({
+    top: direction * 180,
+    left: direction * 180,
+    behavior: state.reducedMotion ? 'auto' : 'smooth',
+  });
+}
+
+function continueRanking() {
+  ui.resultsSection.classList.add('hidden');
+  ui.battleSection.classList.remove('hidden');
 }
 
 function isTypingTarget(target) {
@@ -176,7 +243,25 @@ function onUpload(event) {
   ui.uploadInput.value = '';
 }
 
-function clearAll() {
+function loadDemoCollection() {
+  clearAll(true);
+  state.photos = DEMO_PHOTOS.map(([src, name], index) => ({
+    id: `demo-${String(index + 1).padStart(2, '0')}`,
+    name,
+    src,
+    elo: BASE_ELO,
+    wins: 0,
+    losses: 0,
+    seen: 0,
+  }));
+  renderPreviews();
+  renderFinder();
+  startBattle();
+  closeCollectionDrawer();
+  toast('Demo collection ready');
+}
+
+function clearAll(quiet = false) {
   stopTimer();
   stopTransition();
   state.photos = [];
@@ -192,30 +277,33 @@ function clearAll() {
   ui.previewGrid.innerHTML = '';
   ui.battleSection.classList.add('hidden');
   ui.resultsSection.classList.add('hidden');
-  ui.countLabel.textContent = `0 / ${MAX_PHOTOS}`;
-  ui.roundLabel.textContent = 'Round 0';
+  ui.countLabel.textContent = '0';
+  ui.roundLabel.textContent = 'Ready';
   ui.streakLabel.textContent = 'Streak 0';
-  ui.confidenceFill.style.width = '0%';
+  ui.confidenceMeter.value = 0;
+  ui.confidenceMeter.textContent = '0%';
   ui.confidenceText.textContent = '0%';
   ui.confidenceNote.textContent = 'Provisional — compare every photo a few times for a more reliable order.';
   ui.confidenceNote.classList.remove('stable');
   updateUndoButton();
+  document.body.classList.remove('has-battle');
+  ui.emptySection.classList.remove('hidden');
   renderFinder();
+  renderPreviews();
+  if (!quiet) openCollectionDrawer();
 
-  toast('Cleared all photos.');
+  if (!quiet) toast('Collection cleared');
 }
 
 function renderPreviews() {
-  ui.countLabel.textContent = `${state.photos.length} / ${MAX_PHOTOS}`;
-  const matches = getFinderMatches();
-  const visiblePhotos = state.finderQuery ? matches : state.photos;
+  ui.countLabel.textContent = String(state.photos.length);
+  const visiblePhotos = state.photos;
+  const activeIds = new Set((state.activePair || []).map((photo) => photo.id));
+  document.body.classList.toggle('has-battle', state.photos.length >= 2);
+  ui.emptySection.classList.toggle('hidden', state.photos.length >= 2);
 
   if (!visiblePhotos.length) {
-    ui.previewGrid.innerHTML = `
-      <div class="preview-empty">
-        ${state.photos.length ? 'No uploaded photos match your finder search.' : 'No photos uploaded yet.'}
-      </div>
-    `;
+    ui.previewGrid.innerHTML = '';
     return;
   }
 
@@ -223,10 +311,10 @@ function renderPreviews() {
     .map((photo) => {
       const index = state.photos.findIndex((entry) => entry.id === photo.id);
       return `
-        <div class="thumb" title="${escapeAttr(photo.name)}" data-photo-id="${photo.id}">
+        <div class="thumb ${activeIds.has(photo.id) ? 'active' : ''}" title="${escapeAttr(photo.name)}" data-photo-id="${photo.id}">
           <img src="${photo.src}" alt="${escapeAttr(photo.name)}" />
           <span class="thumb-name">${escapeHtml(photo.name)}</span>
-          <button class="thumb-remove" data-index="${index}" aria-label="Remove ${escapeAttr(photo.name)}">×</button>
+          <button class="thumb-remove" data-index="${index}" aria-label="Remove ${escapeAttr(photo.name)}"><i class="ph ph-x" aria-hidden="true"></i></button>
         </div>
       `;
     })
@@ -316,6 +404,9 @@ function removePhoto(index) {
     state.activePair = null;
     ui.battleSection.classList.add('hidden');
     ui.resultsSection.classList.add('hidden');
+    ui.emptySection.classList.remove('hidden');
+    document.body.classList.remove('has-battle');
+    openCollectionDrawer();
     stopTimer();
   } else if (state.activePair?.some((p) => !state.photos.find((x) => x.id === p.id))) {
     nextRound(true);
@@ -325,6 +416,9 @@ function removePhoto(index) {
 function startBattle() {
   ui.battleSection.classList.remove('hidden');
   ui.resultsSection.classList.add('hidden');
+  ui.emptySection.classList.add('hidden');
+  document.body.classList.add('has-battle');
+  closeCollectionDrawer();
   ui.battleTitle.textContent = MODE_META[state.mode].title;
 
   if (!state.activePair) {
@@ -344,37 +438,39 @@ function nextRound(skipped = false) {
   if (state.activePair) state.lastPairKey = pairKey(...state.activePair);
   state.round += 1;
   state.streak = skipped ? 0 : state.streak;
-  ui.roundLabel.textContent = `Round ${state.round}`;
+  ui.roundLabel.textContent = `${state.round} of ${recommendedRounds(state.photos.length)}`;
   ui.streakLabel.textContent = `Streak ${state.streak}`;
 
   state.activePair = choosePair(state.photos, state.lastPairKey);
   renderArena(state.activePair);
   renderConfidence();
+  renderPreviews();
 
   if (state.mode === 'speed') startTimer();
 }
 
 function renderArena(pair) {
   const [left, right] = pair;
-  const labels = MODE_META[state.mode].cardLabels;
 
   ui.arena.innerHTML = `
     <div class="pair-grid mode-${state.mode}">
-      ${renderCard(left, labels[0], 'left')}
-      ${renderCard(right, labels[1], 'right')}
+      ${renderCard(left, 'left')}
+      ${renderCard(right, 'right')}
     </div>
+    <div class="vs-badge" aria-hidden="true">VS</div>
   `;
 
   wireBattleInteractions(left, right);
   runModeFx();
 }
 
-function renderCard(photo, label, side) {
+function renderCard(photo, side) {
+  const icon = side === 'left' ? 'ph-arrow-left' : 'ph-arrow-right';
   return `
     <article class="photo-card ${side}" data-id="${photo.id}" role="button" tabindex="0" aria-label="Choose ${escapeAttr(photo.name)}">
       <img src="${photo.src}" alt="${escapeAttr(photo.name)}" />
-      <div class="label">${label}</div>
-      ${state.mode === 'boxing' ? '<div class="ring-glow"></div>' : ''}
+      <span class="choice-affordance" aria-hidden="true"><i class="ph ${icon}"></i><span>${side}</span></span>
+      <span class="photo-name">${escapeHtml(photo.name)}</span>
     </article>
   `;
 }
@@ -462,7 +558,7 @@ function runModeFx() {
       card.classList.add('slot-spin');
       setTimeout(() => card.classList.remove('slot-spin'), 450 + idx * 75);
     });
-    setTimeout(() => toast('🎰 Spin complete — pick the winner!'), 250);
+    setTimeout(() => toast('Spin complete — pick the winner'), 250);
   }
 
   if (state.mode === 'runway') {
@@ -500,7 +596,6 @@ function registerBattle(winner, loser, winnerCardEl) {
   updateUndoButton();
 
   winnerCardEl.classList.add('winner');
-  celebrate();
   playClickTone();
   toast(randomReaction());
 
@@ -517,7 +612,8 @@ function registerBattle(winner, loser, winnerCardEl) {
 
 function renderConfidence() {
   const confidence = confidenceDetails(state.photos);
-  ui.confidenceFill.style.width = `${confidence.percent}%`;
+  ui.confidenceMeter.value = confidence.percent;
+  ui.confidenceMeter.textContent = `${confidence.percent}%`;
   ui.confidenceText.textContent = `${confidence.percent}%`;
   ui.confidenceNote.classList.toggle('stable', confidence.percent >= 80);
   if (confidence.percent < 40) {
@@ -564,15 +660,16 @@ function undoLastVote() {
     .map((id) => state.photos.find((photo) => photo.id === id))
     .filter(Boolean);
 
-  ui.roundLabel.textContent = `Round ${state.round}`;
+  ui.roundLabel.textContent = `${state.round} of ${recommendedRounds(state.photos.length)}`;
   ui.streakLabel.textContent = `Streak ${state.streak}`;
   ui.resultsSection.classList.add('hidden');
   renderArena(state.activePair);
   renderConfidence();
   renderFinder();
+  renderPreviews();
   updateUndoButton();
   if (state.mode === 'speed') startTimer();
-  toast('↩ Last vote undone');
+  toast('Last vote undone');
 }
 
 function startTimer() {
@@ -636,7 +733,7 @@ function finishRanking() {
     });
   });
 
-  toast('🏆 Ranking complete');
+  toast('Ranking complete');
 }
 
 function openLightbox(src, alt = 'Expanded photo') {
@@ -651,11 +748,11 @@ function closeLightbox() {
 
 function randomReaction() {
   const reactions = [
-    '🔥 Nice pick!',
-    '💥 KO!',
-    '✨ Clean win!',
-    '👏 Crowd agrees!',
-    '⚡ Fast instinct!',
+    'Nice pick',
+    'Clear winner',
+    'Clean choice',
+    'Ranking updated',
+    'Fast instinct',
   ];
   return reactions[Math.floor(Math.random() * reactions.length)];
 }
@@ -665,19 +762,6 @@ function toast(message) {
   ui.toast.classList.remove('hidden');
   clearTimeout(toast.timer);
   toast.timer = setTimeout(() => ui.toast.classList.add('hidden'), 1300);
-}
-
-function celebrate() {
-  if (state.reducedMotion) return;
-  for (let i = 0; i < 18; i += 1) {
-    const confetti = document.createElement('div');
-    confetti.className = 'confetti';
-    confetti.style.left = `${Math.random() * 100}vw`;
-    confetti.style.background = `hsl(${Math.random() * 360} 90% 60%)`;
-    confetti.style.animationDuration = `${900 + Math.random() * 600}ms`;
-    document.body.appendChild(confetti);
-    setTimeout(() => confetti.remove(), 1600);
-  }
 }
 
 function playClickTone() {

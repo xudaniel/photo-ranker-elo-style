@@ -3,103 +3,191 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#070b13" />
     <title>Photo Ranker</title>
+    <link rel="stylesheet" href="/vendor/inter/index.css" />
+    <link rel="stylesheet" href="/vendor/phosphor/regular/style.css" />
     <link rel="stylesheet" href="/styles.css" />
   </head>
-  <body>
+  <body class="drawer-open">
     <div id="app">
-      <header class="hero">
-        <h1>Photo Ranker</h1>
-        <p>Upload photos, battle them, and crown your podium.</p>
+      <header class="topbar">
+        <a class="brand" href="/" aria-label="Photo Ranker home">
+          <span class="brand-mark"><i class="ph ph-crown-simple" aria-hidden="true"></i></span>
+          <span>Photo Ranker</span>
+        </a>
+
+        <button id="collection-toggle" class="collection-toggle" type="button" aria-expanded="true" aria-controls="collection-drawer">
+          <i class="ph ph-folder-simple" aria-hidden="true"></i>
+          <span>Collection</span>
+          <span id="count-label" class="collection-count">0</span>
+          <i class="ph ph-caret-down" aria-hidden="true"></i>
+        </button>
+
+        <div class="session-status" aria-label="Ranking progress">
+          <div class="confidence-compact">
+            <span>Confidence</span>
+            <strong id="confidence-text">0%</strong>
+            <progress id="confidence-meter" max="100" value="0">0%</progress>
+          </div>
+          <span id="round-label" class="round-label">Ready</span>
+          <span id="streak-label" class="visually-hidden">Streak 0</span>
+        </div>
       </header>
 
-      <section class="card" id="upload-section">
-        <h2>1) Upload Photos</h2>
-        <p class="subtle">Choose up to 20 photos.</p>
-        <input id="upload-input" type="file" accept="image/*" multiple />
-        <div class="inline-stats">
-          <span id="count-label">0 / 20</span>
-          <button id="clear-btn" class="ghost">Clear</button>
+      <aside id="collection-drawer" class="collection-drawer" aria-label="Photo collection">
+        <div class="drawer-head">
+          <div>
+            <span class="eyebrow">Your workspace</span>
+            <h2>Collection</h2>
+          </div>
+          <button id="drawer-close" class="icon-button" type="button" aria-label="Close collection">
+            <i class="ph ph-x" aria-hidden="true"></i>
+          </button>
         </div>
+
+        <section id="upload-section" class="drawer-section">
+          <div class="section-heading">
+            <div>
+              <h3>Add photos</h3>
+              <p>Up to 20 images. They stay in this browser session.</p>
+            </div>
+            <button id="clear-btn" class="text-button" type="button">Clear</button>
+          </div>
+          <label class="upload-button" for="upload-input" role="button" tabindex="0">
+            <i class="ph ph-upload-simple" aria-hidden="true"></i>
+            Choose photos
+          </label>
+          <input id="upload-input" class="visually-hidden" type="file" accept="image/*" multiple />
+          <button id="demo-btn" class="secondary-button" type="button">
+            <i class="ph ph-play" aria-hidden="true"></i>
+            Load demo collection
+          </button>
+        </section>
+
+        <section id="finder-section" class="drawer-section">
+          <div class="section-heading">
+            <div>
+              <h3>Find a photo</h3>
+              <p>Search by filename, position, or Elo.</p>
+            </div>
+            <span id="finder-summary" class="finder-summary">0 photos</span>
+          </div>
+          <label class="search-field" for="finder-input">
+            <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+            <input id="finder-input" type="search" placeholder="Search collection" autocomplete="off" />
+            <button id="finder-clear-btn" type="button" aria-label="Clear search" disabled>
+              <i class="ph ph-x" aria-hidden="true"></i>
+            </button>
+          </label>
+          <div id="finder-results" class="finder-results empty">Add photos to search your collection.</div>
+        </section>
+
+        <section id="mode-section" class="drawer-section">
+          <div class="section-heading">
+            <div>
+              <h3>Battle style</h3>
+              <p>Visual style only—every vote counts equally.</p>
+            </div>
+          </div>
+          <div class="mode-grid" id="mode-grid">
+            <button class="mode active" data-mode="head">Head-to-Head</button>
+            <button class="mode" data-mode="speed">Speed Blitz</button>
+            <button class="mode" data-mode="vibe">Vibe Check</button>
+            <button class="mode" data-mode="boxing">Boxing Ring</button>
+            <button class="mode" data-mode="slot">Slot Machine</button>
+            <button class="mode" data-mode="runway">Runway</button>
+          </div>
+          <div id="speed-controls" class="speed-controls hidden">
+            <label for="speed-timer">Round timer <span id="timer-label">10s</span></label>
+            <input id="speed-timer" type="range" min="5" max="20" value="10" />
+          </div>
+        </section>
+      </aside>
+      <button id="drawer-scrim" class="drawer-scrim" type="button" aria-label="Close collection"></button>
+
+      <main class="workspace">
+        <section id="empty-section" class="empty-stage">
+          <span class="empty-icon"><i class="ph ph-images" aria-hidden="true"></i></span>
+          <span class="eyebrow">Private, local-first ranking</span>
+          <h1>Find your strongest photo.</h1>
+          <p>Choose between two images at a time. Photo Ranker turns those small decisions into a clear, explainable order.</p>
+          <div class="empty-actions">
+            <label class="primary-button" for="upload-input" role="button" tabindex="0">
+              <i class="ph ph-upload-simple" aria-hidden="true"></i>
+              Choose photos
+            </label>
+            <button id="empty-demo-btn" class="secondary-button" type="button">
+              <i class="ph ph-play" aria-hidden="true"></i>
+              Try the demo
+            </button>
+          </div>
+          <span class="privacy-note"><i class="ph ph-shield-check" aria-hidden="true"></i> Your photos never leave this browser.</span>
+        </section>
+
+        <section class="battle-stage hidden" id="battle-section">
+          <h2 id="battle-title" class="visually-hidden">Head-to-Head Mode</h2>
+          <div id="timer-shell" class="timer-shell hidden" aria-label="Round timer">
+            <div id="timer-fill" class="timer-fill"></div>
+          </div>
+          <p id="confidence-note" class="confidence-note visually-hidden" aria-live="polite">Provisional — compare every photo a few times for a more reliable order.</p>
+          <div id="arena" class="arena"></div>
+
+          <div class="action-dock" aria-label="Ranking controls">
+            <button id="undo-btn" class="dock-button" disabled>
+              <i class="ph ph-arrow-u-up-left" aria-hidden="true"></i>
+              <span>Undo</span>
+            </button>
+            <button id="skip-btn" class="dock-button">
+              <i class="ph ph-fast-forward" aria-hidden="true"></i>
+              <span>Skip</span>
+            </button>
+            <button id="finish-btn" class="dock-button primary">
+              <i class="ph ph-check" aria-hidden="true"></i>
+              <span>Finish</span>
+            </button>
+          </div>
+          <p class="keyboard-hint"><kbd>←</kbd><kbd>→</kbd> choose <span>·</span> <kbd>S</kbd> skip <span>·</span> <kbd>U</kbd> undo</p>
+        </section>
+
+        <section class="results-overlay hidden" id="results-section" aria-labelledby="results-title">
+          <div class="results-panel">
+            <div class="results-head">
+              <div>
+                <span class="eyebrow">Your final order</span>
+                <h2 id="results-title">Ranking results</h2>
+                <p id="results-summary"></p>
+              </div>
+              <button id="continue-btn" class="icon-button" type="button" aria-label="Continue ranking">
+                <i class="ph ph-x" aria-hidden="true"></i>
+              </button>
+            </div>
+            <div id="podium" class="podium"></div>
+            <ol id="ranking-list" class="ranking-list"></ol>
+            <div class="results-actions">
+              <button id="continue-ranking-btn" class="secondary-button" type="button">Continue ranking</button>
+              <button id="results-done-btn" class="primary-button" type="button">Done</button>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <aside id="photo-rail" class="photo-rail" aria-label="Uploaded photos">
+        <button id="rail-scroll-up" class="rail-button" type="button" aria-label="Scroll photos up">
+          <i class="ph ph-caret-up" aria-hidden="true"></i>
+        </button>
         <div id="preview-grid" class="preview-grid"></div>
-      </section>
-
-      <section class="card" id="finder-section">
-        <div class="section-head">
-          <div>
-            <h2>2) Pic Finder</h2>
-            <p class="subtle">Search your browser-loaded photos by file name before or during battles.</p>
-          </div>
-          <span id="finder-summary" class="pill">0 matches</span>
-        </div>
-        <label class="finder-label" for="finder-input">Find a pic</label>
-        <div class="finder-row">
-          <input id="finder-input" type="search" placeholder="Try “beach”, “portrait”, or a file name" autocomplete="off" />
-          <button id="finder-clear-btn" class="ghost" type="button">Reset</button>
-        </div>
-        <div id="finder-results" class="finder-results empty">Upload photos to start finding them.</div>
-      </section>
-
-      <section class="card" id="mode-section">
-        <h2>3) Battle Style</h2>
-        <div class="mode-grid" id="mode-grid">
-          <button class="mode active" data-mode="head">Head-to-Head</button>
-          <button class="mode" data-mode="speed">Speed Blitz</button>
-          <button class="mode" data-mode="vibe">Vibe Check</button>
-          <button class="mode" data-mode="boxing">Boxing Ring</button>
-          <button class="mode" data-mode="slot">Slot Machine</button>
-          <button class="mode" data-mode="runway">Runway</button>
-        </div>
-
-        <div id="speed-controls" class="inline-controls hidden">
-          <label for="speed-timer">Round timer</label>
-          <input id="speed-timer" type="range" min="5" max="20" value="10" />
-          <span id="timer-label">10s</span>
-        </div>
-      </section>
-
-      <section class="card hidden" id="battle-section">
-        <div class="battle-top">
-          <h2 id="battle-title">Battle</h2>
-          <div>
-            <span id="round-label">Round 0</span>
-            <span id="streak-label" class="pill">Streak 0</span>
-          </div>
-        </div>
-
-        <div id="timer-shell" class="timer-shell hidden">
-          <div id="timer-fill" class="timer-fill"></div>
-        </div>
-
-        <div id="confidence-wrap" class="confidence-wrap">
-          <span title="Estimate based on comparison coverage and balance">Ranking confidence</span>
-          <div class="confidence-bar"><div id="confidence-fill"></div></div>
-          <span id="confidence-text">0%</span>
-        </div>
-        <p id="confidence-note" class="confidence-note" aria-live="polite">Provisional — compare every photo a few times for a more reliable order.</p>
-
-        <div id="arena" class="arena"></div>
-
-        <p class="keyboard-hint"><kbd>←</kbd> choose left · <kbd>→</kbd> choose right · <kbd>S</kbd> skip · <kbd>U</kbd> undo</p>
-
-        <div class="battle-actions">
-          <button id="undo-btn" class="ghost" disabled>Undo Last Vote</button>
-          <button id="skip-btn" class="ghost">Skip Pair</button>
-          <button id="finish-btn">Finish Ranking</button>
-        </div>
-      </section>
-
-      <section class="card hidden" id="results-section">
-        <h2>Results</h2>
-        <p id="results-summary" class="subtle"></p>
-        <div id="podium" class="podium"></div>
-        <ol id="ranking-list" class="ranking-list"></ol>
-      </section>
+        <button id="rail-scroll-down" class="rail-button" type="button" aria-label="Scroll photos down">
+          <i class="ph ph-caret-down" aria-hidden="true"></i>
+        </button>
+      </aside>
     </div>
 
     <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
-    <div id="lightbox" class="lightbox hidden">
-      <button id="lightbox-close">×</button>
+    <div id="lightbox" class="lightbox hidden" role="dialog" aria-modal="true" aria-label="Expanded photo">
+      <button id="lightbox-close" class="icon-button" type="button" aria-label="Close expanded photo">
+        <i class="ph ph-x" aria-hidden="true"></i>
+      </button>
       <img id="lightbox-img" alt="Expanded photo" />
     </div>
 
