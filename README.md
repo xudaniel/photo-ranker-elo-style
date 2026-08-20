@@ -1,6 +1,6 @@
 # Photo Ranker
 
-Photo Ranker is a private, browser-based app for turning a small collection of photos into a preference ranking. Instead of asking you to sort every image at once, it presents two photos at a time and asks one simple question: **Which do you prefer?**
+Photo Ranker is a private, browser-based app for turning a small collection of photos into a preference ranking. Instead of asking you to sort every image at once, it presents two photos at a time [...]
 
 An adaptive pairing system and Elo ratings turn those choices into a top-three podium and a complete ordered list. The experience is designed to be quick, playful, explainable, and local-first.
 
@@ -10,7 +10,7 @@ For detailed requirements and acceptance criteria, see [PRD.md](./PRD.md).
 
 ## Why Photo Ranker?
 
-Choosing the strongest photos from a similar set is difficult because comparing the whole collection at once creates choice overload. Pairwise ranking breaks the task into small decisions, then uses those decisions to estimate the user’s overall preference order.
+Choosing the strongest photos from a similar set is difficult because comparing the whole collection at once creates choice overload. Pairwise ranking breaks the task into small decisions, then us[...]
 
 Photo Ranker is useful for:
 
@@ -20,7 +20,7 @@ Photo Ranker is useful for:
 - comparing visual concepts or creative treatments;
 - identifying a top choice without manually dragging every image into order.
 
-The result represents the user’s preferences during that session. Elo is an organization tool, not an objective judgment of image quality.
+The result represents the user's preferences during that session. Elo is an organization tool, not an objective judgment of image quality.
 
 ## Current feature set
 
@@ -38,7 +38,7 @@ The result represents the user’s preferences during that session. Elo is an or
 - Compare exactly two candidates at a time.
 - Click or tap the preferred photo to register a vote.
 - Skip a pair when there is no clear choice.
-- Track each photo’s Elo rating, wins, losses, and comparison count.
+- Track each photo's Elo rating, wins, losses, and comparison count.
 - Prioritize photos with fewer comparisons.
 - Focus on similarly rated top contenders after coverage is balanced.
 - Avoid showing the identical pair in consecutive rounds when another pairing exists.
@@ -54,7 +54,7 @@ The result represents the user’s preferences during that session. Elo is an or
 - Recommend `max(12, number of photos × 4)` rounds.
 - Automatically reveal results after the recommended number of rounds.
 
-The confidence percentage combines overall comparison coverage with coverage balance across the full collection. Repeatedly comparing only a few photos cannot produce a high score. Confidence does not prove that the order is objectively correct.
+The confidence percentage combines overall comparison coverage with coverage balance across the full collection. Repeatedly comparing only a few photos cannot produce a high score. Confidence does[...]
 
 ### Results
 
@@ -100,7 +100,7 @@ Every battle style uses the same underlying vote and Elo semantics. Modes change
 7. Select **Finish Ranking** at any time, or let the recommended session complete automatically.
 8. Review the podium, shared ranks, and complete ranked list.
 
-Use the left and right arrow keys to choose the matching side, `S` to skip, and `U` or `Cmd/Ctrl+Z` to undo. Double-click a battle image to inspect it at full size. In Vibe Check, a horizontal swipe of at least 70 pixels also selects that card.
+Use the left and right arrow keys to choose the matching side, `S` to skip, and `U` or `Cmd/Ctrl+Z` to undo. Double-click a battle image to inspect it at full size. In Vibe Check, a horizontal sw[...]
 
 ## How ranking works
 
@@ -129,7 +129,7 @@ This is more useful than purely random pairing because it improves coverage whil
 
 ### Confidence
 
-The app measures each photo’s comparison coverage against the target implied by the recommended round count. It combines average coverage with the coverage of the least-compared photo. Confidence reaches 100% only when the recommended work is complete and balanced across the collection.
+The app measures each photo's comparison coverage against the target implied by the recommended round count. It combines average coverage with the coverage of the least-compared photo. Confiden[...]
 
 Current limitations:
 
@@ -198,14 +198,14 @@ The server only serves files from `public/`. Upload selection, image decoding, r
 
 ## Privacy and security model
 
-- Images are opened through the browser’s file picker and converted to in-memory data URLs.
+- Images are opened through the browser's file picker and converted to in-memory data URLs.
 - Image content is not included in requests to the local Node server.
 - There are no accounts, remote storage, trackers, or analytics in the current app.
 - Refreshing or closing the page clears the browser-memory session.
 - User-controlled filenames are escaped before being inserted into rendered HTML.
 - The server normalizes paths and limits responses to the public asset directory.
 
-Before public deployment, the project should add a restrictive Content Security Policy, HTTPS, explicit privacy copy near upload, and automated checks confirming that image and filename data never leave the browser.
+Before public deployment, the project should add a restrictive Content Security Policy, HTTPS, explicit privacy copy near upload, and automated checks confirming that image and filename data neve[...]
 
 ## Roadmap
 
@@ -298,7 +298,7 @@ The roadmap prioritizes reliability and trust before expanding the visual experi
 
 - Generate an optional shareable results graphic from chosen thumbnails.
 - Require an explicit action before any image-containing export.
-- Add custom session titles and evaluation prompts such as “best profile photo” or “strongest campaign image.”
+- Add custom session titles and evaluation prompts such as "best profile photo" or "strongest campaign image."
 - Add neutral tags or notes that stay local to the session.
 - Offer a distraction-free professional mode with sound and effects disabled.
 - Offer reusable, user-defined battle-style themes without changing vote semantics.
@@ -366,4 +366,6 @@ When changing ranking behavior:
 
 ## License
 
-No license has been declared. All rights are reserved unless the repository owner adds a license file.
+Copyright © 2024 DANIEL XU
+
+This project is licensed under the MIT License. See the [LICENSE](./LICENSE) file for details.
