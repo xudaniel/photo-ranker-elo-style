@@ -3,7 +3,9 @@
 [![CI](https://github.com/xudaniel/photos-ranker-v202604/actions/workflows/ci.yml/badge.svg)](https://github.com/xudaniel/photos-ranker-v202604/actions/workflows/ci.yml)
 [![MIT License](https://img.shields.io/badge/license-MIT-111827.svg)](LICENSE)
 
-Photo Ranker is a private, browser-based app for turning a small collection of photos into a preference ranking. Instead of asking you to sort every image at once, it presents two photos at a time [...]
+**Live app:** [xudaniel.github.io/photos-ranker-v202604](https://xudaniel.github.io/photos-ranker-v202604/)
+
+Photo Ranker is a private, browser-based app for turning a small collection of photos into a preference ranking. Instead of asking you to sort every image at once, it presents two photos at a time and asks one simple question: **Which do you prefer?**
 
 An adaptive pairing system and Elo ratings turn those choices into a top-three podium and a complete ordered list. The experience is designed to be quick, playful, explainable, and local-first.
 
@@ -15,7 +17,7 @@ For detailed requirements and acceptance criteria, see [PRD.md](./PRD.md).
 
 ## Why Photo Ranker?
 
-Choosing the strongest photos from a similar set is difficult because comparing the whole collection at once creates choice overload. Pairwise ranking breaks the task into small decisions, then us[...]
+Choosing the strongest photos from a similar set is difficult because comparing the whole collection at once creates choice overload. Pairwise ranking breaks the task into small decisions, then uses those decisions to estimate the user’s overall preference order.
 
 Photo Ranker is useful for:
 
@@ -59,7 +61,7 @@ The result represents the user's preferences during that session. Elo is an orga
 - Recommend `max(12, number of photos × 4)` rounds.
 - Automatically reveal results after the recommended number of rounds.
 
-The confidence percentage combines overall comparison coverage with coverage balance across the full collection. Repeatedly comparing only a few photos cannot produce a high score. Confidence does[...]
+The confidence percentage combines overall comparison coverage with coverage balance across the full collection. Repeatedly comparing only a few photos cannot produce a high score. Confidence does not prove that the order is objectively correct.
 
 ### Results
 
@@ -105,7 +107,7 @@ Every battle style uses the same underlying vote and Elo semantics. Modes change
 7. Select **Finish Ranking** at any time, or let the recommended session complete automatically.
 8. Review the podium, shared ranks, and complete ranked list.
 
-Use the left and right arrow keys to choose the matching side, `S` to skip, and `U` or `Cmd/Ctrl+Z` to undo. Double-click a battle image to inspect it at full size. In Vibe Check, a horizontal sw[...]
+Use the left and right arrow keys to choose the matching side, `S` to skip, and `U` or `Cmd/Ctrl+Z` to undo. Double-click a battle image to inspect it at full size. In Vibe Check, a horizontal swipe of at least 70 pixels also selects that card.
 
 ## How ranking works
 
@@ -134,7 +136,7 @@ This is more useful than purely random pairing because it improves coverage whil
 
 ### Confidence
 
-The app measures each photo's comparison coverage against the target implied by the recommended round count. It combines average coverage with the coverage of the least-compared photo. Confiden[...]
+The app measures each photo's comparison coverage against the target implied by the recommended round count. It combines average coverage with the coverage of the least-compared photo. Confidence reaches 100% only when the recommended work is complete and balanced across the collection.
 
 Current limitations:
 
@@ -210,7 +212,7 @@ The server only serves files from `public/`. Upload selection, image decoding, r
 - User-controlled filenames are escaped before being inserted into rendered HTML.
 - The server normalizes paths and limits responses to the public asset directory.
 
-Before public deployment, the project should add a restrictive Content Security Policy, HTTPS, explicit privacy copy near upload, and automated checks confirming that image and filename data neve[...]
+Before public deployment, the project should add a restrictive Content Security Policy, HTTPS, explicit privacy copy near upload, and automated checks confirming that image and filename data never leave the browser.
 
 ## Roadmap
 
