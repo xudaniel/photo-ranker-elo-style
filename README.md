@@ -1,10 +1,15 @@
 # Photo Ranker
 
+[![CI](https://github.com/xudaniel/photos-ranker-v202604/actions/workflows/ci.yml/badge.svg)](https://github.com/xudaniel/photos-ranker-v202604/actions/workflows/ci.yml)
+[![MIT License](https://img.shields.io/badge/license-MIT-111827.svg)](LICENSE)
+
 Photo Ranker is a private, browser-based app for turning a small collection of photos into a preference ranking. Instead of asking you to sort every image at once, it presents two photos at a time [...]
 
 An adaptive pairing system and Elo ratings turn those choices into a top-three podium and a complete ordered list. The experience is designed to be quick, playful, explainable, and local-first.
 
 > **Privacy:** Photos are loaded into browser memory for the current session. The app does not upload them to the Node server or a cloud service.
+>
+> **Demo assets:** The portraits under `public/demo/` are excluded from the code license until their provenance is documented. See [ASSETS.md](ASSETS.md).
 
 For detailed requirements and acceptance criteria, see [PRD.md](./PRD.md).
 
