@@ -1,7 +1,7 @@
 # Photo Ranker — Product Requirements Document
 
 **Product:** Photo Ranker  
-**Repository:** `photos-ranker-v202604`  
+**Repository:** `photo-ranker-elo-style`
 **Document status:** Draft 1.0  
 **Last updated:** 2026-08-06  
 **Owner:** Product / Engineering

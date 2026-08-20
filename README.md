@@ -1,9 +1,9 @@
 # Photo Ranker
 
-[![CI](https://github.com/xudaniel/photos-ranker-v202604/actions/workflows/ci.yml/badge.svg)](https://github.com/xudaniel/photos-ranker-v202604/actions/workflows/ci.yml)
+[![CI](https://github.com/xudaniel/photo-ranker-elo-style/actions/workflows/ci.yml/badge.svg)](https://github.com/xudaniel/photo-ranker-elo-style/actions/workflows/ci.yml)
 [![MIT License](https://img.shields.io/badge/license-MIT-111827.svg)](LICENSE)
 
-**Live app:** [xudaniel.github.io/photos-ranker-v202604](https://xudaniel.github.io/photos-ranker-v202604/)
+**Live app:** [xudaniel.github.io/photo-ranker-elo-style](https://xudaniel.github.io/photo-ranker-elo-style/)
 
 Photo Ranker is a private, browser-based app for turning a small collection of photos into a preference ranking. Instead of asking you to sort every image at once, it presents two photos at a time and asks one simple question: **Which do you prefer?**
 
@@ -159,8 +159,8 @@ No third-party packages are required.
 ### Start the app
 
 ```bash
-git clone https://github.com/xudaniel/photos-ranker-v202604.git
-cd photos-ranker-v202604
+git clone https://github.com/xudaniel/photo-ranker-elo-style.git
+cd photo-ranker-elo-style
 npm start
 ```
 
@@ -177,7 +177,7 @@ PORT=8080 npm start
 Photo Ranker intentionally uses a small, framework-free architecture.
 
 ```text
-photos-ranker-v202604/
+photo-ranker-elo-style/
 ├── PRD.md
 ├── README.md
 ├── package.json

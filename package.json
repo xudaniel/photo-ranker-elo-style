@@ -1,5 +1,5 @@
 {
-  "name": "photos-ranker-v202604",
+  "name": "photo-ranker-elo-style",
   "version": "1.1.0",
   "private": true,
   "description": "Node-served static Photo Ranker app",
